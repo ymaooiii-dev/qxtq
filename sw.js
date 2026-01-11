@@ -1,23 +1,19 @@
-const CACHE_NAME = 'mood-weather-v2';
+const CACHE_NAME = 'mood-weather-v3';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json',
-  './favicon.ico',
-  './logo192.png',
-  './logo512.png'
+  './manifest.json'
 ];
 
-// Install Service Worker
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      // 使用 try-catch 避免因为个别图标缺失导致整个 SW 安装失败
+      return cache.addAll(ASSETS).catch(err => console.log('Asset cache warning:', err));
     })
   );
 });
 
-// Activate & Clean old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -28,8 +24,10 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Strategy: Network First, falling back to cache
 self.addEventListener('fetch', (event) => {
+  // 仅缓存同源请求
+  if (!event.request.url.startsWith(self.location.origin)) return;
+
   event.respondWith(
     fetch(event.request).catch(() => {
       return caches.match(event.request);
