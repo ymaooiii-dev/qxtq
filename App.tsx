@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MoodWeatherType, MoodEntry, ClimateReport } from './types';
-import { MOOD_CONFIGS } from './constants';
-import { getMoodEntries, saveMoodEntry, getTodayEntries, clearTodayEntries } from './services/storage';
-import { generateClimateReport, getDailyInsight } from './services/geminiService';
-import MoodSelector from './components/MoodSelector';
-import MoodNoteInput from './components/MoodNoteInput';
-import TrendChart from './components/TrendChart';
-import ClimateReportView from './components/ClimateReportView';
-import Timeline from './components/Timeline';
-import { Cloud, Calendar, TrendingUp, Sparkles, Clock, ArrowRight, AlertCircle, ChevronLeft, Minus, MessageSquare, Menu, ArrowRightCircle } from 'lucide-react';
+import { MoodWeatherType, MoodEntry, ClimateReport } from './types.ts';
+import { MOOD_CONFIGS } from './constants.tsx';
+import { getMoodEntries, saveMoodEntry, getTodayEntries } from './services/storage.ts';
+import { generateClimateReport, getDailyInsight } from './services/geminiService.ts';
+import MoodSelector from './components/MoodSelector.tsx';
+import MoodNoteInput from './components/MoodNoteInput.tsx';
+import TrendChart from './components/TrendChart.tsx';
+import ClimateReportView from './components/ClimateReportView.tsx';
+import Timeline from './components/Timeline.tsx';
+import { Calendar, ChevronLeft, Sparkles, AlertCircle, ArrowRightCircle } from 'lucide-react';
 
 // Helper to get consistent local date key YYYY-MM-DD
 const getLocalDateKey = (d: string | number) => {
@@ -108,7 +108,6 @@ const App: React.FC = () => {
       setSelectedDateKey(dateKey);
       setSelectedDateLabel(new Date(dayEntries[0].date).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' }));
       
-      // 平滑滚动到详情区域
       setTimeout(() => {
         if (detailsRef.current) {
           detailsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });

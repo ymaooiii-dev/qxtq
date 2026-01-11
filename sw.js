@@ -1,11 +1,11 @@
-const CACHE_NAME = 'mood-weather-v1';
+const CACHE_NAME = 'mood-weather-v2';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.ico',
-  '/logo192.png',
-  '/logo512.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './favicon.ico',
+  './logo192.png',
+  './logo512.png'
 ];
 
 // Install Service Worker
