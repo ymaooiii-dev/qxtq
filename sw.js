@@ -1,15 +1,26 @@
-const CACHE_NAME = 'mood-weather-v3';
+const CACHE_NAME = 'mood-weather-v4';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json'
+  './index.tsx',
+  './App.tsx',
+  './types.ts',
+  './constants.tsx',
+  './manifest.json',
+  './services/storage.ts',
+  './services/geminiService.ts',
+  './components/MoodSelector.tsx',
+  './components/MoodNoteInput.tsx',
+  './components/TrendChart.tsx',
+  './components/ClimateReportView.tsx',
+  './components/Timeline.tsx'
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // 使用 try-catch 避免因为个别图标缺失导致整个 SW 安装失败
-      return cache.addAll(ASSETS).catch(err => console.log('Asset cache warning:', err));
+      return cache.addAll(ASSETS).catch(err => console.warn('Cache incomplete', err));
     })
   );
 });
@@ -25,9 +36,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // 仅缓存同源请求
-  if (!event.request.url.startsWith(self.location.origin)) return;
-
+  // 优先尝试网络，失败则走缓存（因为 Babel 需要获取最新的 .tsx 内容）
   event.respondWith(
     fetch(event.request).catch(() => {
       return caches.match(event.request);
