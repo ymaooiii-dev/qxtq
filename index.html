@@ -13,80 +13,65 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="MoodWeather">
     <link rel="apple-touch-icon" href="logo192.png">
-    <link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="manifest.json">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
     
-    <!-- Babel 实时编译 -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Babel 实时编译 - 使用更稳定的 CDN 链接 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.11/babel.min.js"></script>
 
     <style>
         :root { --ins-bg: #f8fafc; --blob-1: rgba(225, 235, 255, 0.6); --blob-2: rgba(241, 245, 249, 0.6); }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--ins-bg); margin: 0; overflow-x: hidden; }
         .ins-blob { position: fixed; border-radius: 50%; filter: blur(100px); z-index: -1; opacity: 0.7; }
-        .blob-lg { width: 100vw; height: 100vw; top: -30%; right: -20%; background: var(--blob-1); animation: float-slow 30s infinite alternate; }
-        .blob-sm { width: 80vw; height: 80vw; bottom: -20%; left: -10%; background: var(--blob-2); animation: float-slow 25s infinite alternate-reverse; }
-        @keyframes float-slow { from { transform: translate(0, 0) scale(1); } to { transform: translate(-5%, 8%) scale(1.1); } }
+        .blob-lg { width: 100vw; height: 100vw; top: -30%; right: -20%; background: var(--blob-1); }
+        .blob-sm { width: 80vw; height: 80vw; bottom: -20%; left: -10%; background: var(--blob-2); }
         .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border: 1px solid rgba(255, 255, 255, 0.8); }
         @keyframes w-spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .animate-w-spin { animation: w-spin-slow 20s linear infinite; }
     </style>
 
     <script>
         window.process = { env: { API_KEY: "" } };
         
-        // 设置超时检测
-        window.loadTimer = setTimeout(() => {
-            showError("启动超时。这通常是由于网络缓慢或脚本加载受阻引起的。");
-        }, 15000);
+        // 关键：全局错误捕获
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error("Global Error:", message, source);
+            if (message.includes("Babel") || message.includes("Script error")) {
+                showError("应用初始化失败。请尝试清除浏览器缓存，或确保在 Chrome/Edge 中打开。");
+            }
+        };
 
         function showError(msg) {
-            clearTimeout(window.loadTimer);
             const root = document.getElementById('root');
             if (root) {
-                root.innerHTML = `<div style="padding: 40px; color: #64748b; font-family: sans-serif; text-align: center;">
-                    <h3 style="color: #ef4444; margin-bottom: 12px; font-weight: 700;">连接环境异常</h3>
-                    <p style="font-size: 14px; line-height: 1.6; max-width: 300px; margin: 0 auto; opacity: 0.8;">${msg}</p>
-                    <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px; align-items: center;">
-                        <button onclick="clearCacheAndReload()" style="padding: 12px 24px; background: #6366f1; color: white; border: none; border-radius: 99px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">清除缓存并重试</button>
-                        <button onclick="location.reload()" style="font-size: 13px; color: #94a3b8; text-decoration: underline; background: none; border: none;">直接刷新</button>
-                    </div>
+                root.innerHTML = `<div style="padding: 40px; color: #64748b; font-family: sans-serif; text-align: center; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f8fafc;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                    <h3 style="color: #ef4444; margin-bottom: 12px; font-weight: 700;">应用启动受阻</h3>
+                    <p style="font-size: 14px; line-height: 1.6; max-width: 280px; margin: 0 auto; opacity: 0.8;">${msg}</p>
+                    <button onclick="clearEverything()" style="margin-top: 32px; padding: 14px 28px; background: #6366f1; color: white; border: none; border-radius: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);">深度重置并重试</button>
                 </div>`;
             }
         }
 
-        async function clearCacheAndReload() {
+        async function clearEverything() {
             try {
-                // 解决 "Document in invalid state" 错误的防御性写法
-                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                    const registrations = await navigator.serviceWorker.getRegistrations();
-                    for (const reg of registrations) {
-                        await reg.unregister();
-                    }
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for(let r of regs) await r.unregister();
                 }
-                
                 if (window.caches) {
                     const keys = await caches.keys();
-                    for (const key of keys) {
-                        await caches.delete(key);
-                    }
+                    for(let k of keys) await caches.delete(k);
                 }
-                
-                // 清除所有本地存储作为兜底
                 localStorage.clear();
-                window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
-            } catch (err) {
-                console.error("Cleanup error:", err);
-                location.reload(); // 出错也强制刷新
+                sessionStorage.clear();
+                // 强制刷新并跳过缓存
+                window.location.reload(true);
+            } catch (e) {
+                window.location.href = window.location.origin + window.location.pathname + '?r=' + Math.random();
             }
         }
-
-        window.addEventListener('error', (e) => {
-            if (e.target.tagName === 'SCRIPT') {
-                showError("关键组件加载失败，请检查网络或重置缓存。");
-            }
-        }, true);
     </script>
 
     <script type="importmap">
@@ -104,18 +89,16 @@
 }
 </script>
 
-    <!-- 使用 Babel 处理模块加载 -->
-    <script type="text/babel" data-type="module" data-presets="react,typescript">
-        import './index.tsx';
-    </script>
+    <!-- 采用最稳定的 Babel 模块加载方式 -->
+    <script type="text/babel" data-type="module" data-presets="react,typescript" src="index.tsx"></script>
 </head>
 <body>
     <div class="ins-blob blob-lg"></div>
     <div class="ins-blob blob-sm"></div>
     <div id="root">
-        <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; gap: 16px;">
-            <div style="width: 24px; height: 24px; border: 2px solid #f1f5f9; border-top-color: #6366f1; border-radius: 50%; animation: w-spin-slow 0.8s linear infinite;"></div>
-            <p style="letter-spacing: 0.1em; font-size: 12px; font-weight: 500;">Atmosphere Syncing...</p>
+        <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; gap: 16px; background: #f8fafc;">
+            <div style="width: 28px; height: 28px; border: 3px solid #f1f5f9; border-top-color: #6366f1; border-radius: 50%; animation: w-spin-slow 0.8s linear infinite;"></div>
+            <p style="letter-spacing: 0.15em; font-size: 11px; font-weight: 700; color: #6366f1;">ATMOSPHERE SYNCING</p>
         </div>
     </div>
 </body>
