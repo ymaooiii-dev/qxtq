@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { MoodWeatherType, MoodConfig } from './types';
+import { MoodWeatherType, MoodConfig } from './types.ts';
 
 export const MOOD_CONFIGS: Record<MoodWeatherType, MoodConfig> = {
   [MoodWeatherType.SUNNY]: {

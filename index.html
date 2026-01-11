@@ -98,20 +98,32 @@
         .animate-w-pulse { animation: w-pulse 5s ease-in-out infinite; }
     </style>
 
-    <!-- 修复关键：注入 process 全局变量，防止代码在执行时崩溃 -->
     <script>
         window.process = { env: { API_KEY: "" } };
+        // Error tracking
+        window.onerror = function(msg, url, line) {
+            const root = document.getElementById('root');
+            if (root) {
+                root.innerHTML = `<div style="padding: 20px; color: #ef4444; font-family: monospace;">
+                    <h3 style="margin-top: 0;">App Error</h3>
+                    <p>${msg}</p>
+                    <small>at ${url}:${line}</small>
+                    <button onclick="location.reload()" style="margin-top: 20px; padding: 8px 16px; background: #334155; color: white; border: none; border-radius: 6px;">Retry</button>
+                </div>`;
+            }
+            return false;
+        };
     </script>
 
     <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@19?dev",
-    "react-dom": "https://esm.sh/react-dom@19?dev",
-    "react-dom/client": "https://esm.sh/react-dom@19/client?dev",
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
     "lucide-react": "https://esm.sh/lucide-react@0.475.0?external=react",
     "@google/genai": "https://esm.sh/@google/genai@1.35.0",
-    "recharts": "https://esm.sh/recharts@3.6.0?external=react,react-dom",
+    "recharts": "https://esm.sh/recharts@2.12.7?external=react,react-dom",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/"
   }
@@ -124,9 +136,9 @@
     <div class="ins-blob blob-lg"></div>
     <div class="ins-blob blob-sm"></div>
     <div id="root">
-        <!-- 页面初次加载时的骨架 -->
-        <div style="height: 100vh; display: flex; align-items: center; justify-content: center; font-family: sans-serif; color: #94a3b8;">
-            <p>Loading Atmosphere...</p>
+        <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; color: #94a3b8; gap: 16px;">
+            <div style="width: 40px; height: 40px; border: 3px solid #f1f5f9; border-top-color: #6366f1; border-radius: 50%; animation: w-spin-slow 1s linear infinite;"></div>
+            <p style="letter-spacing: 0.1em; font-size: 14px; font-weight: 500;">Loading Atmosphere...</p>
         </div>
     </div>
 </body>

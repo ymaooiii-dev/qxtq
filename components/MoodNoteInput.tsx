@@ -1,7 +1,6 @@
-
 import React from 'react';
-import { MoodWeatherType } from '../types';
-import { MOOD_CONFIGS } from '../constants';
+import { MoodWeatherType } from '../types.ts';
+import { MOOD_CONFIGS } from '../constants.tsx';
 import { X, Check } from 'lucide-react';
 
 interface MoodNoteInputProps {
@@ -41,9 +40,6 @@ const MoodNoteInput: React.FC<MoodNoteInputProps> = ({
           className="w-full h-36 bg-white/70 border-2 border-white rounded-3xl p-6 resize-none focus:outline-none focus:border-indigo-200 focus:bg-white transition-all text-slate-700 placeholder:text-slate-400 text-lg font-serif leading-relaxed shadow-sm"
           autoFocus
         />
-        <div className="absolute bottom-4 right-4 text-[10px] text-slate-300 font-bold uppercase tracking-widest pointer-events-none">
-          {note.length} / 140
-        </div>
       </div>
 
       <div className="flex gap-4 mt-10">

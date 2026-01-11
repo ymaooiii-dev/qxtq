@@ -1,7 +1,6 @@
-
 import React from 'react';
-import { MoodWeatherType } from '../types';
-import { MOOD_CONFIGS } from '../constants';
+import { MoodWeatherType } from '../types.ts';
+import { MOOD_CONFIGS } from '../constants.tsx';
 
 interface MoodSelectorProps {
   onSelect: (type: MoodWeatherType) => void;

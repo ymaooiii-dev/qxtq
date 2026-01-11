@@ -1,7 +1,7 @@
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { MoodEntry, MoodWeatherType } from '../types';
-import { MOOD_CONFIGS } from '../constants';
+import { MoodEntry, MoodWeatherType } from '../types.ts';
+import { MOOD_CONFIGS } from '../constants.tsx';
 
 interface TrendChartProps {
   entries: MoodEntry[];
@@ -25,7 +25,6 @@ const getLocalDateKey = (d: string | number) => {
 };
 
 const TrendChart: React.FC<TrendChartProps> = ({ entries, onDayClick, selectedDateKey }) => {
-  // 获取最近 14 天的有记录日期
   const sortedDates = Array.from(new Set<string>(entries.map(e => getLocalDateKey(e.date))))
     .sort()
     .slice(-14);
@@ -34,7 +33,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ entries, onDayClick, selectedDa
     const dayEntries = entries.filter(e => getLocalDateKey(e.date) === dateKey).sort((a,b) => a.timestamp - b.timestamp);
     const lastEntry = dayEntries[dayEntries.length - 1];
     return {
-      rawDate: dateKey, // 作为 XAxis 的真正 DataKey
+      rawDate: dateKey,
       displayDate: new Date(lastEntry.date).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }),
       value: MOOD_VALUES[lastEntry.mood],
       label: MOOD_CONFIGS[lastEntry.mood].label,
@@ -47,7 +46,6 @@ const TrendChart: React.FC<TrendChartProps> = ({ entries, onDayClick, selectedDa
   });
 
   const handleChartClick = (data: any) => {
-    // Recharts 在 AreaChart 上的 onClick 会返回 activeLabel (即 XAxis 的 dataKey)
     const dateKey = data?.activeLabel;
     if (dateKey && onDayClick) {
       onDayClick(dateKey);
@@ -60,13 +58,11 @@ const TrendChart: React.FC<TrendChartProps> = ({ entries, onDayClick, selectedDa
       return (
         <div className="bg-slate-900/95 backdrop-blur-md p-4 shadow-2xl rounded-2xl border border-white/10 text-white min-w-[160px] animate-in zoom-in-95 duration-200">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-white/10 pb-2">{entry.displayDate} 气象概览</p>
-          
           <div className="space-y-3">
              <div className="flex items-center gap-3">
                 <span className="text-3xl filter drop-shadow-lg">{entry.icon}</span>
                 <span className="font-bold text-lg">{entry.label}</span>
              </div>
-             
              {entry.allMoods.length > 1 && (
                <div className="pt-2 border-t border-white/5">
                  <p className="text-[9px] text-slate-500 mb-2 uppercase font-black">当日演变</p>
@@ -81,7 +77,6 @@ const TrendChart: React.FC<TrendChartProps> = ({ entries, onDayClick, selectedDa
                </div>
              )}
           </div>
-
           <div className="mt-4 flex items-center justify-between text-[10px] text-indigo-400 font-bold uppercase tracking-tighter">
              <span>点击查看详细记录</span>
              <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></div>
@@ -105,13 +100,10 @@ const TrendChart: React.FC<TrendChartProps> = ({ entries, onDayClick, selectedDa
               <stop offset="5%" stopColor="#818cf8" stopOpacity={0.4}/>
               <stop offset="95%" stopColor="#818cf8" stopOpacity={0.0}/>
             </linearGradient>
-            <filter id="shadow" height="200%">
-              <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#818cf8" floodOpacity={0.2}/>
-            </filter>
           </defs>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" opacity={0.3} />
           <XAxis 
-            dataKey="rawDate" // 关键：使用 rawDate 作为唯一标识
+            dataKey="rawDate"
             axisLine={false} 
             tickLine={false} 
             tickFormatter={(val) => {
@@ -135,7 +127,6 @@ const TrendChart: React.FC<TrendChartProps> = ({ entries, onDayClick, selectedDa
             fillOpacity={1}
             fill="url(#colorGradient)"
             animationDuration={1000}
-            filter="url(#shadow)"
             dot={(props: any) => {
               const { cx, cy, payload } = props;
               const isSelected = selectedDateKey === payload.rawDate;
@@ -146,15 +137,8 @@ const TrendChart: React.FC<TrendChartProps> = ({ entries, onDayClick, selectedDa
                   fill={isSelected ? '#4f46e5' : '#fff'} 
                   stroke="#6366f1" 
                   strokeWidth={isSelected ? 4 : 2} 
-                  className="transition-all duration-300"
                 />
               );
-            }}
-            activeDot={{ 
-                r: 10, 
-                fill: '#4f46e5', 
-                stroke: '#fff', 
-                strokeWidth: 4
             }}
           />
         </AreaChart>

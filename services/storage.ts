@@ -1,11 +1,9 @@
-
-import { MoodEntry } from "../types";
+import { MoodEntry } from "../types.ts";
 
 const STORAGE_KEY = 'mood_weather_entries_v2';
 
 export function saveMoodEntry(entry: MoodEntry): void {
   const entries = getMoodEntries();
-  // We keep all entries now to track intraday changes
   entries.push(entry);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }

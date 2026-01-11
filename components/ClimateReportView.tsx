@@ -1,7 +1,6 @@
-
 import React from 'react';
-import { ClimateReport } from '../types';
-import { Music, Quote, Sun, Play, Disc, Sparkles, AlertCircle } from 'lucide-react';
+import { ClimateReport } from '../types.ts';
+import { Music, Quote, Sun, Disc, Sparkles, AlertCircle } from 'lucide-react';
 
 interface ClimateReportViewProps {
   report: ClimateReport;
@@ -45,7 +44,6 @@ const ClimateReportView: React.FC<ClimateReportViewProps> = ({ report, isLoading
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-      {/* Summary Header */}
       <div className="text-center space-y-6 pb-6 border-b border-dashed border-slate-200">
         <div className="magazine-label text-indigo-500 bg-indigo-50 inline-block px-4 py-1 rounded-full">每周气候洞察</div>
         <p className="text-2xl md:text-3xl font-serif text-slate-800 leading-relaxed text-balance">
@@ -54,7 +52,6 @@ const ClimateReportView: React.FC<ClimateReportViewProps> = ({ report, isLoading
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Advice Card */}
         <div className="bg-orange-50/50 p-8 rounded-[2rem] border border-orange-100/50 relative overflow-hidden group hover:bg-orange-50 transition-colors">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
             <Sun size={120} className="text-orange-400" />
@@ -69,34 +66,23 @@ const ClimateReportView: React.FC<ClimateReportViewProps> = ({ report, isLoading
           </div>
         </div>
 
-        {/* Music Card - Vinyl Style */}
         <div className="bg-slate-900 text-white p-8 rounded-[2rem] relative overflow-hidden flex flex-col justify-between group shadow-2xl shadow-indigo-200">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/30 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-          
           <div className="flex justify-between items-start mb-8 relative z-10">
             <div className="bg-white/10 backdrop-blur-md p-3 rounded-full border border-white/20">
                <Disc size={24} className="animate-spin-slow" />
             </div>
             <div className="magazine-label text-white/50">听觉处方</div>
           </div>
-          
           <div className="relative z-10 space-y-2">
             <h4 className="text-3xl font-bold tracking-tight">{report.musicSuggestion.genre}</h4>
             <p className="text-indigo-200 text-sm font-medium line-clamp-3 leading-relaxed opacity-90">
               {report.musicSuggestion.description}
             </p>
           </div>
-          
-          <div className="mt-6 flex items-center gap-3 relative z-10">
-             <div className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full w-1/3 bg-indigo-400 rounded-full"></div>
-             </div>
-             <span className="text-[10px] font-mono text-indigo-300">02:45</span>
-          </div>
         </div>
       </div>
 
-      {/* Quote Block */}
       <div className="bg-white p-10 rounded-[2.5rem] text-center relative overflow-hidden shadow-sm border border-slate-100 group">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400"></div>
         <Quote size={32} className="mx-auto mb-6 text-slate-200 group-hover:text-indigo-300 transition-colors" />
