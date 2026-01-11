@@ -99,20 +99,27 @@
     </style>
 
     <script>
+        // 初始化环境，防止 SDK 报错
         window.process = { env: { API_KEY: "" } };
-        // Error tracking
-        window.onerror = function(msg, url, line) {
+        
+        // 捕获模块加载错误（这是解决转圈圈的关键）
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'SCRIPT') {
+                showError("文件加载失败: " + (e.target.src || "未知脚本"));
+            }
+        }, true);
+
+        function showError(msg) {
             const root = document.getElementById('root');
             if (root) {
-                root.innerHTML = `<div style="padding: 20px; color: #ef4444; font-family: monospace;">
-                    <h3 style="margin-top: 0;">App Error</h3>
-                    <p>${msg}</p>
-                    <small>at ${url}:${line}</small>
-                    <button onclick="location.reload()" style="margin-top: 20px; padding: 8px 16px; background: #334155; color: white; border: none; border-radius: 6px;">Retry</button>
+                root.innerHTML = `<div style="padding: 40px; color: #64748b; font-family: sans-serif; text-align: center;">
+                    <h3 style="color: #ef4444; margin-bottom: 12px;">启动失败</h3>
+                    <p style="font-size: 14px; line-height: 1.6;">${msg}</p>
+                    <p style="font-size: 12px; margin-top: 20px; color: #94a3b8;">提示：如果在 GitHub Pages 访问，请确保所有文件已正确编译为 .js 或环境支持 .tsx 原生加载。</p>
+                    <button onclick="location.reload()" style="margin-top: 24px; padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 99px; cursor: pointer;">重试</button>
                 </div>`;
             }
-            return false;
-        };
+        }
     </script>
 
     <script type="importmap">
@@ -129,6 +136,7 @@
   }
 }
 </script>
+    <!-- 使用 ./ 相对路径确保在子目录下也能找到文件 -->
     <script type="module" src="./index.tsx"></script>
 </head>
 <body>
@@ -137,8 +145,8 @@
     <div class="ins-blob blob-sm"></div>
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; color: #94a3b8; gap: 16px;">
-            <div style="width: 40px; height: 40px; border: 3px solid #f1f5f9; border-top-color: #6366f1; border-radius: 50%; animation: w-spin-slow 1s linear infinite;"></div>
-            <p style="letter-spacing: 0.1em; font-size: 14px; font-weight: 500;">Loading Atmosphere...</p>
+            <div style="width: 32px; height: 32px; border: 2px solid #f1f5f9; border-top-color: #6366f1; border-radius: 50%; animation: w-spin-slow 0.8s linear infinite;"></div>
+            <p style="letter-spacing: 0.1em; font-size: 13px; font-weight: 500; opacity: 0.8;">Loading Atmosphere...</p>
         </div>
     </div>
 </body>
