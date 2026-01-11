@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#f8fafc">
+    
+    <!-- PWA primary meta tags -->
+    <meta name="title" content="MoodWeather - 情绪天气预报">
+    <meta name="description" content="记录心情，遇见心里的天气。AI驱动的情绪报告与治愈见解。">
+    
+    <!-- iOS support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="MoodWeather">
+    <link rel="apple-touch-icon" href="logo192.png">
+
+    <link rel="manifest" href="manifest.json">
+    <title>MoodWeather - 情绪天气预报</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ins-bg: #f8fafc;
+            --blob-1: rgba(225, 235, 255, 0.6);
+            --blob-2: rgba(241, 245, 249, 0.6);
+            --vibe-filter: saturate(100%) brightness(100%);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--ins-bg);
+            margin: 0;
+            color: #333;
+            overflow-x: hidden;
+            transition: background-color 2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-user-select: none;
+            user-select: none;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        input, textarea, [contenteditable] {
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 50; opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        .ins-blob {
+            position: fixed; border-radius: 50%; filter: blur(100px); z-index: -1;
+            transition: all 2.5s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0.7;
+        }
+        .blob-lg { width: 100vw; height: 100vw; top: -30%; right: -20%; background: var(--blob-1); animation: float-slow 30s infinite alternate; }
+        .blob-sm { width: 80vw; height: 80vw; bottom: -20%; left: -10%; background: var(--blob-2); animation: float-slow 25s infinite alternate-reverse; }
+
+        @keyframes float-slow {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(-5%, 8%) scale(1.1); }
+        }
+
+        .weather-sunny { --ins-bg: #fffcf0; --blob-1: #fef08a; --blob-2: #fed7aa; --vibe-filter: saturate(120%) brightness(102%); }
+        .weather-partly-cloudy { --ins-bg: #f8fafc; --blob-1: #e0f2fe; --blob-2: #bae6fd; }
+        .weather-cloudy { --ins-bg: #f1f5f9; --blob-1: #cbd5e1; --blob-2: #94a3b8; --vibe-filter: saturate(80%); }
+        .weather-rainy { --ins-bg: #eff6ff; --blob-1: #bfdbfe; --blob-2: #60a5fa; --vibe-filter: saturate(90%) contrast(95%); }
+        .weather-storm { --ins-bg: #f5f3ff; --blob-1: #ddd6fe; --blob-2: #a78bfa; --vibe-filter: contrast(110%) brightness(95%); }
+        .weather-hazy { --ins-bg: #fafaf9; --blob-1: #e7e5e4; --blob-2: #d6d3d1; --vibe-filter: blur(1px) saturate(70%); }
+        .weather-windy { --ins-bg: #f0fdfa; --blob-1: #ccfbf1; --blob-2: #5eead4; }
+
+        #root { filter: var(--vibe-filter); transition: filter 2s ease; }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(32px) saturate(120%);
+            -webkit-backdrop-filter: blur(32px) saturate(120%);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .font-serif { font-family: 'Noto Serif SC', serif; }
+        .magazine-label { letter-spacing: 0.25em; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+
+        @keyframes w-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes w-spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes w-shake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+        @keyframes w-wind { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(10px); } }
+        @keyframes w-rain { 0% { transform: translateY(0); } 50% { transform: translateY(6px); } 100% { transform: translateY(0); } }
+        @keyframes w-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.92); opacity: 0.7; } }
+
+        .animate-w-float { animation: w-float 4s ease-in-out infinite; }
+        .animate-w-spin { animation: w-spin-slow 20s linear infinite; }
+        .animate-w-shake { animation: w-shake 4s ease-in-out infinite; }
+        .animate-w-wind { animation: w-wind 2.5s ease-in-out infinite; }
+        .animate-w-rain { animation: w-rain 1.5s ease-in-out infinite; }
+        .animate-w-pulse { animation: w-pulse 5s ease-in-out infinite; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.35.0",
+    "recharts": "https://esm.sh/recharts@^3.6.0"
+  }
+}
+</script>
+</head>
+<body>
+    <div class="noise-overlay"></div>
+    <div class="ins-blob blob-lg"></div>
+    <div class="ins-blob blob-sm"></div>
+    <div id="root"></div>
+</body>
+</html>

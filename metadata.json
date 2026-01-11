@@ -1,0 +1,5 @@
+{
+  "name": "MoodWeather - 情绪天气预报",
+  "description": "A mental health tracking app that turns your daily moods into a weather forecast, providing AI-powered climate reports and healing insights.",
+  "requestFramePermissions": []
+}
