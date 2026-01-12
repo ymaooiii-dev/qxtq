@@ -2,7 +2,6 @@
   "short_name": "MoodWeather",
   "name": "MoodWeather 情绪天气",
   "start_url": "./index.html",
-  "scope": "./",
   "display": "standalone",
   "theme_color": "#f8fafc",
   "background_color": "#f8fafc"

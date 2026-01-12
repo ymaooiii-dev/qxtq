@@ -3,22 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#f8fafc">
     <title>MoodWeather - 情绪天气</title>
     
-    <link rel="manifest" href="manifest.json">
+    <!-- 核心依赖 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
-    <!-- ES Module Shims: 兼容性补丁 -->
     <script async src="https://ga.jspm.io/npm:es-module-shims@1.10.0/dist/es-module-shims.js"></script>
 
     <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@19.0.0",
-    "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "react-dom": "https://esm.sh/react-dom@19.0.0/client",
     "lucide-react": "https://esm.sh/lucide-react@0.475.0?external=react",
     "@google/genai": "https://esm.sh/@google/genai@1.35.0",
     "recharts": "https://esm.sh/recharts@2.12.7?external=react,react-dom",
@@ -30,69 +26,222 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.11/babel.min.js"></script>
 
     <style>
-        body { background: #f8fafc; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .spin { animation: spin 1s linear infinite; border: 3px solid #f1f5f9; border-top-color: #6366f1; border-radius: 50%; width: 24px; height: 24px; }
+        body { background: #f8fafc; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; transition: background 1s ease; }
+        .spin { animation: spin 1s linear infinite; border: 3px solid #f1f5f9; border-top-color: #6366f1; border-radius: 50%; width: 28px; height: 28px; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 动态天气背景 */
+        body.weather-sunny { background: linear-gradient(135deg, #fefce8 0%, #f8fafc 100%); }
+        body.weather-rainy { background: linear-gradient(135deg, #eff6ff 0%, #f1f5f9 100%); }
+        body.weather-storm { background: linear-gradient(135deg, #e0e7ff 0%, #f1f5f9 100%); }
+        
+        .magazine-label { font-size: 10px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
     </style>
 
     <script>
         window.process = { env: { API_KEY: "" } };
         
-        // 强力清除旧环境缓存
-        (async () => {
-            if ('serviceWorker' in navigator) {
-                const regs = await navigator.serviceWorker.getRegistrations();
-                for(let r of regs) await r.unregister();
-            }
-            if ('caches' in window) {
-                const keys = await caches.keys();
-                for(let k of keys) await caches.delete(k);
-            }
-        })();
+        // 自动自愈：尝试注销任何干扰加载的 Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+        }
 
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            const root = document.getElementById('root');
-            if (root) {
-                root.innerHTML = `<div style="padding:40px; color:#ef4444; font-size:12px;">
-                    <h3 style="font-weight:bold">运行异常</h3>
-                    <p>${msg}</p>
-                    <button onclick="location.reload(true)" style="margin-top:20px; background:#6366f1; color:white; padding:10px 20px; border-radius:8px; border:none;">尝试重载</button>
-                </div>`;
-            }
-            return false;
-        };
-
+        // 监控挂载状态
         window.loadTimer = setTimeout(() => {
-            const retryBtn = document.getElementById('retry-btn');
-            if (retryBtn) retryBtn.style.opacity = '1';
-        }, 6000);
+            const btn = document.getElementById('retry-container');
+            if (btn) btn.classList.remove('hidden');
+        }, 10000);
     </script>
 
     <script type="text/babel" data-type="module">
-        import React from 'react';
-        import ReactDOM from 'react-dom/client';
-        import App from './App.tsx';
+        import React, { useState, useEffect, useRef, useMemo } from 'react';
+        import ReactDOM from 'react-dom';
+        import { 
+            Sun, Cloud, CloudRain, Zap, Wind, Fog, Clock, Sparkles, 
+            ChevronLeft, MessageSquare, Quote, AlertCircle, Check, X, Calendar 
+        } from 'lucide-react';
+        import { GoogleGenAI, Type } from "@google/genai";
+        import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
-        try {
-            clearTimeout(window.loadTimer);
-            const container = document.getElementById('root');
-            const root = ReactDOM.createRoot(container);
-            root.render(<App />);
-            console.log("App mounted");
-        } catch (e) {
-            console.error("Mount error:", e);
-            throw e;
+        // --- 1. 配置与常量 ---
+        const MOOD_CONFIGS = {
+            SUNNY: { label: '晴朗', icon: '☀️', color: 'bg-yellow-400', desc: '心情大好，满是阳光' },
+            PARTLY_CLOUDY: { label: '多云', icon: '🌤️', color: 'bg-blue-300', desc: '总体不错，有些思绪' },
+            CLOUDY: { label: '阴天', icon: '☁️', color: 'bg-gray-400', desc: '情绪平平，略显压抑' },
+            RAINY: { label: '细雨', icon: '🌧️', color: 'bg-blue-500', desc: '有些感伤，想静一静' },
+            STORM: { label: '雷雨', icon: '⛈️', color: 'bg-indigo-700', desc: '压力山大，心绪难平' }
+        };
+
+        const STORAGE_KEY = 'mood_weather_db_v4';
+
+        // --- 2. AI 服务逻辑 ---
+        const aiService = {
+            async getDailyInsight(moods) {
+                if (!process.env.API_KEY) return "记录心情，是给自己的一份礼物。";
+                try {
+                    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                    const prompt = `用户今日心情路径：${moods.map(m => MOOD_CONFIGS[m].label).join(' → ')}。请写一句共情力强的诗意短评（15字内）。`;
+                    const res = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt });
+                    return res.text || "感受当下的每一个起伏。";
+                } catch (e) { return "心情的变幻，是生命在呼吸。"; }
+            }
+        };
+
+        // --- 3. 组件库 ---
+        
+        // 3a. 时间流组件
+        const Timeline = ({ entries, label }) => (
+            <div className="bg-white/40 p-6 rounded-[2rem] border border-white shadow-sm overflow-hidden">
+                <div className="magazine-label text-slate-400 mb-6 flex items-center gap-2">
+                    <Clock size={12} /> {label} · 记录流
+                </div>
+                <div className="flex gap-6 overflow-x-auto pb-4 hide-scrollbar">
+                    {entries.map(e => (
+                        <div key={e.id} className="flex flex-col items-center flex-shrink-0 animate-in fade-in slide-in-from-right-4">
+                            <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-2">
+                                {MOOD_CONFIGS[e.type].icon}
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-400">{e.time}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        // --- 4. 主应用 ---
+        function App() {
+            const [activeTab, setActiveTab] = useState('today');
+            const [history, setHistory] = useState([]);
+            const [pendingMood, setPendingMood] = useState(null);
+            const [insight, setInsight] = useState('');
+
+            // 加载数据
+            useEffect(() => {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) setHistory(JSON.parse(saved));
+                clearTimeout(window.loadTimer);
+            }, []);
+
+            // 计算今日数据
+            const todayStr = new Date().toLocaleDateString();
+            const todayEntries = history.filter(e => e.date === todayStr);
+            const latestMood = todayEntries.length > 0 ? todayEntries[0].type : null;
+
+            // 同步主题色
+            useEffect(() => {
+                const mood = pendingMood || latestMood;
+                if (mood) document.body.className = `weather-${mood.toLowerCase().replace('_', '-')}`;
+            }, [pendingMood, latestMood]);
+
+            const saveMood = (type) => {
+                const newEntry = {
+                    id: Date.now(),
+                    type,
+                    date: todayStr,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    timestamp: Date.now()
+                };
+                const updated = [newEntry, ...history].slice(0, 100);
+                setHistory(updated);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+                setPendingMood(null);
+                
+                // 异步获取AI评论
+                const moods = updated.filter(e => e.date === todayStr).map(e => e.type);
+                aiService.getDailyInsight(moods).then(setInsight);
+            };
+
+            return (
+                <div className="min-h-screen max-w-md mx-auto px-6 pt-12 pb-24">
+                    <header className="text-center mb-12">
+                        <div className="magazine-label text-indigo-400 mb-4 tracking-[0.3em]">Mood Meteorological</div>
+                        <h1 className="text-5xl font-serif font-medium text-slate-900 transition-all">
+                            {pendingMood ? '记录此刻' : (latestMood ? MOOD_CONFIGS[latestMood].label : '此刻心情？')}
+                        </h1>
+                    </header>
+
+                    <main className="space-y-12">
+                        {/* 状态选择器 */}
+                        <div className="grid grid-cols-5 gap-3">
+                            {Object.entries(MOOD_CONFIGS).map(([key, cfg]) => (
+                                <button key={key} onClick={() => setPendingMood(key)} 
+                                    className="flex flex-col items-center group">
+                                    <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-all shadow-sm 
+                                        ${pendingMood === key ? 'bg-white scale-125 ring-2 ring-indigo-500' : 'bg-white/50 opacity-60'}`}>
+                                        {cfg.icon}
+                                    </div>
+                                    <span className="text-[8px] mt-3 font-bold text-slate-400 uppercase tracking-tighter">{cfg.label}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* 提交确认面板 */}
+                        {pendingMood && (
+                            <div className="animate-in zoom-in-95 duration-300 bg-white/90 p-8 rounded-[2.5rem] shadow-xl text-center space-y-6">
+                                <p className="text-slate-500 text-sm leading-relaxed">{MOOD_CONFIGS[pendingMood].desc}</p>
+                                <div className="flex gap-4 justify-center">
+                                    <button onClick={() => setPendingMood(null)} className="w-12 h-12 rounded-full border border-slate-200 flex items-center justify-center text-slate-400"><X size={20}/></button>
+                                    <button onClick={() => saveMood(pendingMood)} className="h-12 px-8 rounded-full bg-slate-900 text-white font-bold text-xs tracking-widest flex items-center gap-2">
+                                        <Check size={16}/> 确认同步
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 今日记录流 */}
+                        {!pendingMood && todayEntries.length > 0 && (
+                            <Timeline entries={todayEntries} label="今日" />
+                        )}
+
+                        {/* AI 洞察卡片 */}
+                        {!pendingMood && (insight || (todayEntries.length > 0)) && (
+                            <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden group">
+                                <Sparkles className="absolute top-4 right-4 text-indigo-400 opacity-30 group-hover:rotate-12 transition-transform" />
+                                <p className="text-xl font-serif italic leading-relaxed opacity-90">
+                                    “{insight || "记录下每一个微妙的变化，它们构成了你独特的情绪气候。"}”
+                                </p>
+                                <div className="mt-8 flex items-center gap-3">
+                                    <div className="h-px flex-1 bg-white/10"></div>
+                                    <div className="magazine-label text-indigo-400 text-[8px]">AI Daily Insight</div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* 底部导航 */}
+                    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass rounded-full p-2 flex gap-2 shadow-2xl z-50">
+                        {['today', 'trends', 'report'].map(tab => (
+                            <button key={tab} onClick={() => setActiveTab(tab)}
+                                className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all 
+                                ${activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>
+                                {tab === 'today' ? '实时' : (tab === 'trends' ? '趋势' : '报告')}
+                            </button>
+                        ))}
+                    </nav>
+                </div>
+            );
         }
+
+        const root = document.getElementById('root');
+        ReactDOM.render(<App />, root);
     </script>
 </head>
 <body>
     <div id="root">
-        <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;">
+        <!-- 加载动画占位 -->
+        <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;">
             <div class="spin"></div>
-            <p style="font-size: 10px; font-weight: 800; color: #6366f1; letter-spacing: 0.2em; text-transform: uppercase;">Atmosphere Syncing</p>
-            <button id="retry-btn" onclick="location.reload(true)" style="opacity:0; transition: opacity 0.5s; font-size: 12px; color: #94a3b8; background: none; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 20px;">
-                加载较慢？点击重试
-            </button>
+            <div style="text-align: center;">
+                <p class="magazine-label" style="color: #6366f1;">Atmosphere Syncing</p>
+                <div id="retry-container" class="hidden animate-in fade-in" style="margin-top: 20px;">
+                    <button onclick="location.reload(true)" style="font-size: 11px; color: #94a3b8; background: white; border: 1px solid #e2e8f0; padding: 10px 20px; border-radius: 20px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);">
+                        编译较慢，点击重试
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </body>
