@@ -1,39 +1,14 @@
-const CACHE_NAME = 'mood-weather-v5';
-const ASSETS = [
-  './index.html',
-  './manifest.json',
-  './logo192.png',
-  './logo512.png'
-];
-
-self.addEventListener('install', (event) => {
+const CACHE_NAME = 'mood-v6';
+self.addEventListener('install', (e) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
+  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['./', './index.html', './manifest.json'])));
 });
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      );
-    })
-  );
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.map(k => k !== CACHE_NAME && caches.delete(k)))));
 });
-
-// 网络优先策略，因为我们依赖浏览器实时编译源码
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // 如果网络请求成功，克隆一份存入缓存（可选）
-        return response;
-      })
-      .catch(() => {
-        // 网络失败才看缓存
-        return caches.match(event.request);
-      })
-  );
+self.addEventListener('fetch', (e) => {
+  // 仅针对图片和清单使用缓存，对 JS/TSX 始终走网络，防止 Babel 解析过期代码
+  if (e.request.url.includes('png') || e.request.url.includes('json')) {
+    e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+  }
 });

@@ -4,73 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#f8fafc">
-    
     <title>MoodWeather - 情绪天气预报</title>
     
-    <!-- PWA meta tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="MoodWeather">
-    <link rel="apple-touch-icon" href="logo192.png">
     <link rel="manifest" href="manifest.json">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
-    
-    <!-- Babel 实时编译 - 使用更稳定的 CDN 链接 -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.11/babel.min.js"></script>
 
     <style>
-        :root { --ins-bg: #f8fafc; --blob-1: rgba(225, 235, 255, 0.6); --blob-2: rgba(241, 245, 249, 0.6); }
+        :root { --ins-bg: #f8fafc; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--ins-bg); margin: 0; overflow-x: hidden; }
-        .ins-blob { position: fixed; border-radius: 50%; filter: blur(100px); z-index: -1; opacity: 0.7; }
-        .blob-lg { width: 100vw; height: 100vw; top: -30%; right: -20%; background: var(--blob-1); }
-        .blob-sm { width: 80vw; height: 80vw; bottom: -20%; left: -10%; background: var(--blob-2); }
-        .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border: 1px solid rgba(255, 255, 255, 0.8); }
-        @keyframes w-spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.8); }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .loading-spin { animation: spin 0.8s linear infinite; }
     </style>
 
     <script>
         window.process = { env: { API_KEY: "" } };
         
-        // 关键：全局错误捕获
-        window.onerror = function(message, source, lineno, colno, error) {
-            console.error("Global Error:", message, source);
-            if (message.includes("Babel") || message.includes("Script error")) {
-                showError("应用初始化失败。请尝试清除浏览器缓存，或确保在 Chrome/Edge 中打开。");
+        // 8秒超时检测：如果还卡在转圈圈，说明 JS 加载出错了
+        window.loadTimer = setTimeout(() => {
+            const root = document.getElementById('root');
+            if (root && root.innerHTML.includes('ATMOSPHERE SYNCING')) {
+                showManualFix("组件加载超时。可能是由于 CDN 访问缓慢或浏览器内核版本过低。");
             }
-        };
+        }, 8000);
 
-        function showError(msg) {
+        function showManualFix(msg) {
             const root = document.getElementById('root');
             if (root) {
                 root.innerHTML = `<div style="padding: 40px; color: #64748b; font-family: sans-serif; text-align: center; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f8fafc;">
-                    <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
-                    <h3 style="color: #ef4444; margin-bottom: 12px; font-weight: 700;">应用启动受阻</h3>
-                    <p style="font-size: 14px; line-height: 1.6; max-width: 280px; margin: 0 auto; opacity: 0.8;">${msg}</p>
-                    <button onclick="clearEverything()" style="margin-top: 32px; padding: 14px 28px; background: #6366f1; color: white; border: none; border-radius: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);">深度重置并重试</button>
+                    <div style="font-size: 40px; margin-bottom: 16px;">⏳</div>
+                    <h3 style="color: #6366f1; margin-bottom: 8px; font-weight: 700;">加载时间较长</h3>
+                    <p style="font-size: 13px; line-height: 1.6; max-width: 260px; margin: 0 auto; opacity: 0.7;">${msg}</p>
+                    <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px;">
+                        <button onclick="location.reload(true)" style="padding: 12px 24px; background: #6366f1; color: white; border: none; border-radius: 12px; font-weight: 600;">强制刷新</button>
+                        <button onclick="clearAndReset()" style="font-size: 12px; color: #94a3b8; background: none; border: none; text-decoration: underline;">重置所有缓存</button>
+                    </div>
                 </div>`;
             }
         }
 
-        async function clearEverything() {
-            try {
-                if ('serviceWorker' in navigator) {
-                    const regs = await navigator.serviceWorker.getRegistrations();
-                    for(let r of regs) await r.unregister();
-                }
-                if (window.caches) {
-                    const keys = await caches.keys();
-                    for(let k of keys) await caches.delete(k);
-                }
-                localStorage.clear();
-                sessionStorage.clear();
-                // 强制刷新并跳过缓存
-                window.location.reload(true);
-            } catch (e) {
-                window.location.href = window.location.origin + window.location.pathname + '?r=' + Math.random();
+        async function clearAndReset() {
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for(let r of regs) await r.unregister();
             }
+            localStorage.clear();
+            location.href = location.origin + location.pathname + '?r=' + Math.random();
         }
     </script>
 
@@ -83,22 +68,38 @@
     "lucide-react": "https://esm.sh/lucide-react@0.475.0?external=react",
     "@google/genai": "https://esm.sh/@google/genai@1.35.0",
     "recharts": "https://esm.sh/recharts@2.12.7?external=react,react-dom",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/"
   }
 }
 </script>
 
-    <!-- 采用最稳定的 Babel 模块加载方式 -->
-    <script type="text/babel" data-type="module" data-presets="react,typescript" src="index.tsx"></script>
+    <!-- 直接将 index.tsx 的逻辑内联，确保第一时间执行 -->
+    <script type="text/babel" data-type="module" data-presets="react,typescript">
+        import React from 'react';
+        import ReactDOM from 'react-dom/client';
+        import App from './App.tsx';
+
+        // 只有加载成功了才清除超时提示
+        if (window.loadTimer) {
+            clearTimeout(window.loadTimer);
+        }
+
+        // 延迟注册 Service Worker，避开主进程加载高峰
+        setTimeout(() => {
+            if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+                navigator.serviceWorker.register('./sw.js').catch(e => console.debug('SW silent fail'));
+            }
+        }, 3000);
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </head>
 <body>
-    <div class="ins-blob blob-lg"></div>
-    <div class="ins-blob blob-sm"></div>
     <div id="root">
         <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; gap: 16px; background: #f8fafc;">
-            <div style="width: 28px; height: 28px; border: 3px solid #f1f5f9; border-top-color: #6366f1; border-radius: 50%; animation: w-spin-slow 0.8s linear infinite;"></div>
-            <p style="letter-spacing: 0.15em; font-size: 11px; font-weight: 700; color: #6366f1;">ATMOSPHERE SYNCING</p>
+            <div class="loading-spin" style="width: 24px; height: 24px; border: 3px solid #f1f5f9; border-top-color: #6366f1; border-radius: 50%;"></div>
+            <p style="letter-spacing: 0.2em; font-size: 10px; font-weight: 700; color: #6366f1;">ATMOSPHERE SYNCING</p>
         </div>
     </div>
 </body>
