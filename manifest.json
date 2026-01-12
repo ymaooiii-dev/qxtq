@@ -1,19 +1,7 @@
 {
   "short_name": "MoodWeather",
   "name": "MoodWeather 情绪天气",
-  "icons": [
-    {
-      "src": "logo192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "logo512.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
-  ],
-  "start_url": "index.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "theme_color": "#f8fafc",
