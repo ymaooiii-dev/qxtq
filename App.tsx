@@ -10,7 +10,6 @@ import ClimateReportView from './components/ClimateReportView.tsx';
 import Timeline from './components/Timeline.tsx';
 import { Calendar, ChevronLeft, Sparkles, AlertCircle, ArrowRightCircle } from 'lucide-react';
 
-// Helper to get consistent local date key YYYY-MM-DD
 const getLocalDateKey = (d: string | number) => {
   const date = new Date(d);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -41,7 +40,6 @@ const App: React.FC = () => {
 
   const latestMood = todayEntries.length > 0 ? todayEntries[todayEntries.length - 1].mood : undefined;
 
-  // Sync Body Class for Dynamic Theming
   useEffect(() => {
     const bgMood = pendingMood || (activeTab === 'trends' && selectedDayEntries.length > 0 
       ? selectedDayEntries[selectedDayEntries.length - 1].mood 
